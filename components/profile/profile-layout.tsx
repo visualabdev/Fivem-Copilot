@@ -11,7 +11,6 @@ import { Separator } from "@/components/ui/separator"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { User, Mail, Calendar, Code, FileText, Upload, LogOut, Settings } from "lucide-react"
 import Link from "next/link"
-import { createClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 import { useToast } from "@/hooks/use-toast"
 
@@ -50,34 +49,20 @@ export function ProfileLayout() {
   }, [])
 
   const loadProfile = async () => {
-    const supabase = createClient()
-
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) {
-        router.push("/auth/login")
-        return
+      // Mock profile data - replace with actual authentication later
+      await new Promise(resolve => setTimeout(resolve, 500)) // Simulate loading
+
+      const mockProfile: UserProfile = {
+        id: "mock-user-id",
+        email: "user@example.com",
+        display_name: "Demo User",
+        avatar_url: "",
+        created_at: new Date().toISOString(),
       }
 
-      const { data: profileData, error } = await supabase.from("profiles").select("*").eq("id", user.id).single()
-
-      if (error) {
-        console.error("Error loading profile:", error)
-        return
-      }
-
-      const userProfile: UserProfile = {
-        id: user.id,
-        email: user.email || "",
-        display_name: profileData?.display_name || user.email || "",
-        avatar_url: profileData?.avatar_url,
-        created_at: user.created_at,
-      }
-
-      setProfile(userProfile)
-      setDisplayName(userProfile.display_name)
+      setProfile(mockProfile)
+      setDisplayName(mockProfile.display_name)
     } catch (error) {
       console.error("Error loading profile:", error)
     } finally {
@@ -86,27 +71,18 @@ export function ProfileLayout() {
   }
 
   const loadStats = async () => {
-    const supabase = createClient()
-
     try {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser()
-      if (!user) return
+      // Mock stats data - replace with actual data later
+      await new Promise(resolve => setTimeout(resolve, 300)) // Simulate loading
 
-      // Load user statistics
-      const [projectsResult, snippetsResult, chatSessionsResult] = await Promise.all([
-        supabase.from("projects").select("id", { count: "exact" }).eq("user_id", user.id),
-        supabase.from("code_snippets").select("id", { count: "exact" }).eq("user_id", user.id),
-        supabase.from("chat_sessions").select("id", { count: "exact" }).eq("user_id", user.id),
-      ])
+      const mockStats: UserStats = {
+        projects: 12,
+        snippets: 45,
+        uploads: 8,
+        chatSessions: 23,
+      }
 
-      setStats({
-        projects: projectsResult.count || 0,
-        snippets: snippetsResult.count || 0,
-        uploads: 0, // This would need to be tracked separately
-        chatSessions: chatSessionsResult.count || 0,
-      })
+      setStats(mockStats)
     } catch (error) {
       console.error("Error loading stats:", error)
     }
@@ -116,12 +92,10 @@ export function ProfileLayout() {
     if (!profile) return
 
     setIsSaving(true)
-    const supabase = createClient()
 
     try {
-      const { error } = await supabase.from("profiles").update({ display_name: displayName }).eq("id", profile.id)
-
-      if (error) throw error
+      // Mock profile update - replace with actual API call later
+      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate API call
 
       setProfile({ ...profile, display_name: displayName })
 
@@ -142,8 +116,7 @@ export function ProfileLayout() {
   }
 
   const handleSignOut = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
+    // Mock sign out - replace with actual authentication later
     router.push("/auth/login")
   }
 

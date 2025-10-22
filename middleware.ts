@@ -1,8 +1,9 @@
-import { updateSession } from "@/lib/supabase/middleware"
 import type { NextRequest } from "next/server"
+import { NextResponse } from "next/server"
 
 export async function middleware(request: NextRequest) {
-  return await updateSession(request)
+  // Simple pass-through middleware without authentication for now
+  return NextResponse.next()
 }
 
 export const config = {
