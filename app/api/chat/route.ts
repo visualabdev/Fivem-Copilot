@@ -3,6 +3,8 @@ import { z } from "zod"
 import { getRAGPipeline } from "@/lib/rag-pipeline"
 import { generateText } from "ai"
 import { openai } from "@ai-sdk/openai"
+import { generateWithGoogleAI } from "@/lib/google-ai"
+import { generateWithOpenRouter } from "@/lib/openrouter-ai"
 
 const chatRequestSchema = z.object({
   message: z.string().min(1).max(2000),
@@ -11,12 +13,21 @@ const chatRequestSchema = z.object({
   fileContent: z.string().optional(),
   selectedCode: z.string().optional(),
   framework: z.enum(["qbcore", "esx", "standalone"]).optional(),
+  aiProvider: z.enum(["openai", "google", "openrouter"]).optional(),
 })
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { message, mode, activeFile, fileContent, selectedCode, framework } = chatRequestSchema.parse(body)
+    const {
+      message,
+      mode,
+      activeFile,
+      fileContent,
+      selectedCode,
+      framework,
+      aiProvider = getDefaultAIProvider()
+    } = chatRequestSchema.parse(body)
 
     // Get RAG context
     const ragPipeline = getRAGPipeline()
@@ -35,18 +46,15 @@ export async function POST(request: NextRequest) {
       contextPrompt += `\n\nCurrent File Content (${activeFile}):\n\`\`\`lua\n${fileContent.substring(0, 2000)}\n\`\`\``
     }
 
-    // Generate AI response
+    // Generate AI response using the selected provider
     let response: string
 
     try {
-      const result = await generateText({
-        model: openai(process.env.AI_MODEL || "gpt-4"),
-        prompt: contextPrompt,
+      response = await generateAIResponse(contextPrompt, {
+        provider: aiProvider,
         temperature: Number.parseFloat(process.env.AI_TEMPERATURE || "0.7"),
         maxTokens: Number.parseInt(process.env.AI_MAX_TOKENS || "2048"),
       })
-
-      response = result.text
     } catch (aiError) {
       console.error("AI generation failed, using enhanced fallback:", aiError)
       response = generateEnhancedFallbackResponse(message, mode, ragContext.results, activeFile, selectedCode)
@@ -55,6 +63,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       response,
       mode,
+      aiProvider,
       ragContext: {
         totalResults: ragContext.totalResults,
         searchTime: ragContext.searchTime,
@@ -71,6 +80,51 @@ export async function POST(request: NextRequest) {
     console.error("Chat API error:", error)
     return NextResponse.json({ error: "Invalid request format" }, { status: 400 })
   }
+}
+
+async function generateAIResponse(
+  prompt: string,
+  options: {
+    provider: string
+    temperature: number
+    maxTokens: number
+  }
+): Promise<string> {
+  const { provider, temperature, maxTokens } = options
+
+  switch (provider) {
+    case "google":
+      const googleResult = await generateWithGoogleAI(prompt, {
+        model: process.env.GOOGLE_AI_MODEL || "gemini-1.5-flash",
+        temperature,
+        maxTokens,
+      })
+      return googleResult.text
+
+    case "openrouter":
+      const openRouterResult = await generateWithOpenRouter(prompt, {
+        model: process.env.OPENROUTER_MODEL || "deepseek/deepseek-r1",
+        temperature,
+        maxTokens,
+      })
+      return openRouterResult.text
+
+    case "openai":
+    default:
+      const result = await generateText({
+        model: openai(process.env.AI_MODEL || "gpt-4"),
+        prompt,
+        temperature,
+      })
+      return result.text
+  }
+}
+
+function getDefaultAIProvider(): "openai" | "google" | "openrouter" {
+  // Check which providers are configured and return the first available
+  if (process.env.GOOGLE_AI_API_KEY) return "google"
+  if (process.env.OPENROUTER_API_KEY) return "openrouter"
+  return "openai" // fallback to OpenAI
 }
 
 function buildSystemPrompt(mode: string): string {

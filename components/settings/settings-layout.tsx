@@ -15,8 +15,8 @@ import Link from "next/link"
 
 export function SettingsLayout() {
   const [settings, setSettings] = useState({
-    aiProvider: "openai",
-    aiModel: "gpt-4",
+    aiProvider: "google", // Default to Google AI (free)
+    aiModel: "gemini-1.5-flash",
     apiKey: "",
     temperature: "0.7",
     maxTokens: "2048",
@@ -32,6 +32,62 @@ export function SettingsLayout() {
 
   const handleSettingChange = (key: string, value: string | boolean) => {
     setSettings((prev) => ({ ...prev, [key]: value }))
+  }
+
+  const getProviderInfo = (provider: string) => {
+    const providers = {
+      google: {
+        name: "Google AI Studio",
+        cost: "Free",
+        limit: "1,500 requests/day",
+        models: ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+        defaultModel: "gemini-1.5-flash",
+        badge: "bg-green-100 text-green-800",
+        badgeText: "FREE",
+        setupUrl: "https://makersuite.google.com/app/apikey"
+      },
+      openrouter: {
+        name: "OpenRouter",
+        cost: "Free",
+        limit: "200 requests/day",
+        models: ["deepseek/deepseek-r1", "meta-llama/llama-3.2-3b-instruct", "mistralai/mistral-7b-instruct"],
+        defaultModel: "deepseek/deepseek-r1",
+        badge: "bg-green-100 text-green-800",
+        badgeText: "FREE",
+        setupUrl: "https://openrouter.ai/keys"
+      },
+      openai: {
+        name: "OpenAI",
+        cost: "Paid",
+        limit: "Usage based",
+        models: ["gpt-4", "gpt-4-turbo", "gpt-3.5-turbo"],
+        defaultModel: "gpt-4",
+        badge: "bg-blue-100 text-blue-800",
+        badgeText: "PAID",
+        setupUrl: "https://platform.openai.com/api-keys"
+      },
+      anthropic: {
+        name: "Anthropic",
+        cost: "Paid",
+        limit: "Usage based",
+        models: ["claude-3-opus", "claude-3-sonnet", "claude-3-haiku"],
+        defaultModel: "claude-3-sonnet",
+        badge: "bg-purple-100 text-purple-800",
+        badgeText: "PAID",
+        setupUrl: "https://console.anthropic.com/"
+      },
+      ollama: {
+        name: "Ollama (Local)",
+        cost: "Free",
+        limit: "Local only",
+        models: ["qwen2.5-coder", "llama3.1-instruct", "codellama"],
+        defaultModel: "qwen2.5-coder",
+        badge: "bg-gray-100 text-gray-800",
+        badgeText: "LOCAL",
+        setupUrl: "https://ollama.ai/"
+      }
+    }
+    return providers[provider as keyof typeof providers] || providers.openai
   }
 
   return (
@@ -86,17 +142,51 @@ export function SettingsLayout() {
                     <Label htmlFor="ai-provider">AI Provider</Label>
                     <Select
                       value={settings.aiProvider}
-                      onValueChange={(value) => handleSettingChange("aiProvider", value)}
+                      onValueChange={(value) => {
+                        const providerInfo = getProviderInfo(value)
+                        handleSettingChange("aiProvider", value)
+                        handleSettingChange("aiModel", providerInfo.defaultModel)
+                      }}
                     >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="openai">OpenAI</SelectItem>
-                        <SelectItem value="anthropic">Anthropic</SelectItem>
-                        <SelectItem value="ollama">Ollama (Local)</SelectItem>
+                        <SelectItem value="google">
+                          <div className="flex items-center space-x-2">
+                            <span>Google AI Studio</span>
+                            <Badge className="bg-green-100 text-green-800 text-xs">FREE</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="openrouter">
+                          <div className="flex items-center space-x-2">
+                            <span>OpenRouter</span>
+                            <Badge className="bg-green-100 text-green-800 text-xs">FREE</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="openai">
+                          <div className="flex items-center space-x-2">
+                            <span>OpenAI</span>
+                            <Badge className="bg-blue-100 text-blue-800 text-xs">PAID</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="anthropic">
+                          <div className="flex items-center space-x-2">
+                            <span>Anthropic</span>
+                            <Badge className="bg-purple-100 text-purple-800 text-xs">PAID</Badge>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="ollama">
+                          <div className="flex items-center space-x-2">
+                            <span>Ollama (Local)</span>
+                            <Badge className="bg-gray-100 text-gray-800 text-xs">LOCAL</Badge>
+                          </div>
+                        </SelectItem>
                       </SelectContent>
                     </Select>
+                    <p className="text-xs text-muted-foreground">
+                      {getProviderInfo(settings.aiProvider).limit} • {getProviderInfo(settings.aiProvider).cost}
+                    </p>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="ai-model">Model</Label>
@@ -105,27 +195,11 @@ export function SettingsLayout() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {settings.aiProvider === "openai" && (
-                          <>
-                            <SelectItem value="gpt-4">GPT-4</SelectItem>
-                            <SelectItem value="gpt-4-turbo">GPT-4 Turbo</SelectItem>
-                            <SelectItem value="gpt-3.5-turbo">GPT-3.5 Turbo</SelectItem>
-                          </>
-                        )}
-                        {settings.aiProvider === "anthropic" && (
-                          <>
-                            <SelectItem value="claude-3-opus">Claude 3 Opus</SelectItem>
-                            <SelectItem value="claude-3-sonnet">Claude 3 Sonnet</SelectItem>
-                            <SelectItem value="claude-3-haiku">Claude 3 Haiku</SelectItem>
-                          </>
-                        )}
-                        {settings.aiProvider === "ollama" && (
-                          <>
-                            <SelectItem value="qwen2.5-coder">Qwen2.5 Coder</SelectItem>
-                            <SelectItem value="llama3.1-instruct">Llama 3.1 Instruct</SelectItem>
-                            <SelectItem value="codellama">CodeLlama</SelectItem>
-                          </>
-                        )}
+                        {getProviderInfo(settings.aiProvider).models.map((model) => (
+                          <SelectItem key={model} value={model}>
+                            {model}
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -133,16 +207,117 @@ export function SettingsLayout() {
 
                 <div className="space-y-2">
                   <Label htmlFor="api-key">API Key</Label>
-                  <Input
-                    id="api-key"
-                    type="password"
-                    placeholder="Enter your API key"
-                    value={settings.apiKey}
-                    onChange={(e) => handleSettingChange("apiKey", e.target.value)}
-                  />
+                  <div className="flex space-x-2">
+                    <Input
+                      id="api-key"
+                      type="password"
+                      placeholder={`Enter your ${getProviderInfo(settings.aiProvider).name} API key`}
+                      value={settings.apiKey}
+                      onChange={(e) => handleSettingChange("apiKey", e.target.value)}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open(getProviderInfo(settings.aiProvider).setupUrl, '_blank')}
+                    >
+                      Get Key
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Get your API key from {getProviderInfo(settings.aiProvider).setupUrl}
+                  </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <Separator />
+
+                <div className="space-y-3">
+                  <h4 className="font-medium">AI Providers Comparison</h4>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b">
+                          <th className="text-left py-2">Provider</th>
+                          <th className="text-left py-2">Cost</th>
+                          <th className="text-left py-2">Daily Limit</th>
+                          <th className="text-left py-2">Setup Time</th>
+                          <th className="text-left py-2">Best For</th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-muted-foreground">
+                        <tr className="border-b">
+                          <td className="py-2">
+                            <div className="flex items-center space-x-2">
+                              <span>Google AI Studio</span>
+                              {settings.aiProvider === "google" && (
+                                <Badge className="bg-green-100 text-green-800 text-xs">ACTIVE</Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2">Free</td>
+                          <td className="py-2">1,500 requests</td>
+                          <td className="py-2">2 minutes</td>
+                          <td className="py-2">General use, fast responses</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="py-2">
+                            <div className="flex items-center space-x-2">
+                              <span>OpenRouter</span>
+                              {settings.aiProvider === "openrouter" && (
+                                <Badge className="bg-green-100 text-green-800 text-xs">ACTIVE</Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2">Free</td>
+                          <td className="py-2">200 requests</td>
+                          <td className="py-2">2 minutes</td>
+                          <td className="py-2">Multiple model options</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="py-2">
+                            <div className="flex items-center space-x-2">
+                              <span>OpenAI</span>
+                              {settings.aiProvider === "openai" && (
+                                <Badge className="bg-blue-100 text-blue-800 text-xs">ACTIVE</Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2">Paid</td>
+                          <td className="py-2">Usage based</td>
+                          <td className="py-2">2 minutes</td>
+                          <td className="py-2">High quality, unlimited</td>
+                        </tr>
+                        <tr className="border-b">
+                          <td className="py-2">
+                            <div className="flex items-center space-x-2">
+                              <span>Anthropic</span>
+                              {settings.aiProvider === "anthropic" && (
+                                <Badge className="bg-purple-100 text-purple-800 text-xs">ACTIVE</Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2">Paid</td>
+                          <td className="py-2">Usage based</td>
+                          <td className="py-2">5 minutes</td>
+                          <td className="py-2">Safe, ethical AI</td>
+                        </tr>
+                        <tr>
+                          <td className="py-2">
+                            <div className="flex items-center space-x-2">
+                              <span>Ollama</span>
+                              {settings.aiProvider === "ollama" && (
+                                <Badge className="bg-gray-100 text-gray-800 text-xs">ACTIVE</Badge>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-2">Free</td>
+                          <td className="py-2">Local only</td>
+                          <td className="py-2">30 minutes</td>
+                          <td className="py-2">Privacy, no internet needed</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
                   <div className="space-y-2">
                     <Label htmlFor="temperature">Temperature</Label>
                     <Select
